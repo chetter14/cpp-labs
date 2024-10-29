@@ -16,5 +16,4 @@ build:
 clean:
 	rm -f $(GENERATOR_TARGET) $(TEST_TARGET)
 
-rebuild:
-	clean build
+rebuild: clean build

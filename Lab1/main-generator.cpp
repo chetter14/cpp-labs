@@ -23,9 +23,20 @@ int main()
 	// Write the 'f()' function code to the file
 	fout << "#include <iostream>\n\n";
 	fout << "int f() { \n";
-	fout << "  " << typeA << " a = 1;\n";
+	fout << "  " << typeA << " a = 2;\n";
 	fout << "  " << typeB << " b{ 3 };\n";
-	fout << "  std::cout << a + b << \"\\n\"; \n";
+
+	std::ifstream operators_file{ "operators.txt" };
+	if (!operators_file.is_open()) 
+	{
+		std::cerr << "Error! Failed to open the operators.cpp file!\n";
+		return 1;
+	}
+	for (char oper; operators_file >> oper; )
+	{
+		fout << "  std::cout << a " << oper << " b << \"\\n\"; \n";
+	}
+
 	fout << "  return 0;\n";
 	fout << "}\n";
 
