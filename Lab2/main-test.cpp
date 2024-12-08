@@ -39,18 +39,21 @@ int main() {
 	Person* p_array = new Person[2]{ Person(20, "Martin"), Person(15, "Victor") };
 	delete[] p_array;
 
+	// pass by value:
 	f1(a);
-
+	// pass by &:
 	Person d{ 21, "Orlando" };
 	f2(d);
-
+	// pass by &&:
 	Person e{ 22, "Leo" };
 	Person f{ 23, "Joel" };
 	f3(std::move(e), std::move(f));
-
+	
+	// RVO:
 	Person g;
 	g = f4();
 
+	// vector, list:
 	std::vector<Person> p_vect{ Person(30, "Jack"), Person(31, "Tony") };
 	std::list<Person> p_list{ Person(32, "Brian"), Person(33, "Rocky") };
 
