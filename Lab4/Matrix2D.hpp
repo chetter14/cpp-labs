@@ -5,15 +5,16 @@
 #include <utility>
 #include <vector>
 
-// Design a Matrix2D class:
-//	std::unordered_map<std::pair<int, int>, double> hashTable
-//		if value of matrix is not 0, then store the [x_index, y_index]-value pair in hashTable
-//	addition of matrices
-//	multiplication of matrices
-//	matrix transpose
-//	finding the inverse matrix
-//	raise matrix to the power (of int or real type)
-//	addition, multiplication, and raising to a power each element by value
+// Define hashing function for "pair<int, int>" key
+template<>
+struct std::hash<std::pair<int, int>>
+{
+	std::size_t operator()(const std::pair<int, int>& values) const noexcept
+	{
+		return (std::hash<int>()(values.first)
+			^ std::hash<int>()(values.second));
+	}
+};
 
 class Matrix2D
 {
@@ -26,12 +27,25 @@ public:
 			{
 				if (matrix2d[i][j] != 0)
 				{
-					hashTable.emplace(i, j, matrix2d[i][j]);
+					hashTable_.emplace(std::pair(i, j), matrix2d[i][j]);
 				}
 			}
 		}
-		colSize = matrix2d.size();
-		rowSize = matrix2d[0].size();
+		rowNumber_ = matrix2d.size();
+		colNumber_ = matrix2d[0].size();
+	}
+
+	int getColNumber() const noexcept { return colNumber_; }
+	int getRowNumber() const noexcept { return rowNumber_; }
+
+	bool isNotZero(int x, int y) const noexcept 
+	{	// if such a value exists, then it's not a zero
+		return hashTable_.count(std::pair(x, y)) != 0; 
+	}
+
+	double getValueAt(int x, int y) const noexcept 
+	{ 
+		return hashTable_.at(std::pair(x, y));
 	}
 
 	// Addition and multiplication of matrices
@@ -55,9 +69,9 @@ public:
 
 private:
 	// Stores [x_index, y_index]-value pair
-	std::unordered_map<std::pair<int, int>, double> hashTable;
+	std::unordered_map<std::pair<int, int>, double> hashTable_;
 	// Column and row size
-	int colSize, rowSize;
+	int rowNumber_, colNumber_;
 };
 
 #endif	// MATRIX_2D_H
