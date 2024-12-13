@@ -8,11 +8,6 @@
 #include <cmath>
 #include <iostream>
 
-bool isNotEqualToZero(double val)
-{
-	return std::abs(val - 0.0) < 1e-6;
-}
-
 class Vector
 {
 public:
@@ -35,6 +30,11 @@ public:
 
 	int getVectorSize() const { return hashTable_.size(); }
 
+	auto IterBegin() { return hashTable_.begin(); }
+	auto IterEnd() { return hashTable_.begin(); }
+	auto IterCbegin() const { return hashTable_.cbegin(); }
+	auto IterCend() const { return hashTable_.cend(); }
+
 	friend std::ostream& operator<<(std::ostream& out, const Vector& vect);
 
 	// Addition of vectors
@@ -53,7 +53,7 @@ public:
 private:
 	// Stores index-value pair
 	std::unordered_map<int, double> hashTable_;	
-	// Row size (for calculations)
+	// Column number
 	int colNumber_;
 };
 
@@ -84,22 +84,30 @@ std::optional<Vector> operator+(const Vector& v1, const Vector& v2)
 	int size = v1.colNumber_;
 	Vector result(size);
 
-	double valuesSum;
-	for (int i = 0; i < size; ++i)
+	for (auto iterV1 = v1.IterCbegin(); iterV1 != v1.IterCend(); iterV1++ )
 	{
-		valuesSum = 0.0;
-		if (v1.hashTable_.count(i) != 0)		// if value at such index is not 0
-		{
-			valuesSum += v1.hashTable_.at(i);
-		}
-		if (v2.hashTable_.count(i) != 0)
-		{
-			valuesSum += v2.hashTable_.at(i);
-		}
+		auto [index, value] = (*iterV1);
+		result.hashTable_.emplace(index, value);
+	}
 
-		if (isNotEqualToZero(valuesSum))		// if sum is different from 0.0
+	for (auto iterV2 = v2.IterCbegin(); iterV2 != v2.IterCend(); iterV2++)
+	{
+		auto [index, value] = (*iterV2);
+		if (result.hashTable_.count(index) != 0)			// already added from the iterator 1
 		{
-			result.hashTable_.emplace(i, valuesSum);
+			double sum = result.hashTable_.at(index) + value;
+			if (isNotEqualToZero(sum))						// after an addition from iterator 2
+			{													// not zero - update the result
+				result.hashTable_.emplace(index, sum);
+			}
+			else												// zero - erase an element
+			{
+				result.hashTable_.erase(index);
+			}
+		}
+		else
+		{
+			result.hashTable_.emplace(index, value);
 		}
 	}
 	return result;
@@ -113,13 +121,19 @@ double operator*(const Vector& v1, const Vector& v2)
 		return 0;	// return 0
 	}
 
-	double result = 0.0;
-	for (int i = 0; i < v1.colNumber_; ++i)
+	std::vector<double> tempVect(v1.colNumber_);
+	for (auto iterV1 = v1.IterCbegin(); iterV1 != v1.IterCend(); iterV1++)
 	{
-		if (v1.hashTable_.count(i) != 0 
-			&& v2.hashTable_.count(i) != 0)		// if values at such indices are not 0s
+		tempVect[iterV1->first] = iterV1->second;
+	}
+
+	double result = 0.0;
+	for (auto iterV2 = v2.IterCbegin(); iterV2 != v2.IterCend(); iterV2++)
+	{
+		auto [index, value] = (*iterV2);
+		if (isNotEqualToZero(tempVect[index]))
 		{
-			result += v1.hashTable_.at(i) * v2.hashTable_.at(i);
+			result += tempVect[index] * value;
 		}
 	}
 	return result;
@@ -134,25 +148,33 @@ std::optional<Vector> operator*(const Vector& v, const Matrix2D& matr)
 	}
 
 	Vector result(matr.getColNumber());
-	
-	for (int i = 0; i < matr.getColNumber(); ++i)		// iterate over columns
-	{
-		double valuesResult = 0.0;
 
-		for (int j = 0; j < matr.getRowNumber(); ++j)	// iterate over rows
+	std::vector<double> tempVector(v.colNumber_);
+
+	// Iterate over vector and inside the iteration iterate over matrix
+	// (if col number in vector is equal to row number in matrix - do calculations)
+	// After that iterate over result Vector and erase elements that are equal to 0
+
+	for (auto iterVect = v.IterCbegin(); iterVect != v.IterCend(); iterVect++)
+	{
+		for (auto iterMatr = matr.IterCbegin(); iterMatr != matr.IterCend(); iterMatr++)
 		{
-			if (v.hashTable_.count(j) != 0
-				&& matr.isNotZero(j, i))		// if values at such indices are not 0s
+			int vectColNumber = iterVect->first;
+			auto [matrRowNumber, matrColNumber] = iterMatr->first;
+			if (vectColNumber == matrRowNumber)
 			{
-				valuesResult += v.hashTable_.at(j) * matr.getValueAt(j, i);
+				result.hashTable_[matrColNumber] += iterVect->second * iterMatr->second;
 			}
 		}
-		if (isNotEqualToZero(valuesResult))
-		{
-			result.hashTable_.emplace(i, valuesResult);
-		}
 	}
-	
+
+	for (int i = 0; i < result.hashTable_.size(); ++i)
+	{
+		if (!isNotEqualToZero(result.hashTable_.at(i)))	// if the value is zero
+		{
+			result.hashTable_.erase(i);
+		}
+	}	
 	return result;
 }
 
@@ -160,6 +182,7 @@ Vector operator+(const Vector& v, double value)
 {
 	Vector result(v.colNumber_);
 
+	// No way to avoid brute-force iteration
 	for (int i = 0; i < v.colNumber_; ++i)
 	{
 		double curValue = v.hashTable_.count(i) != 0 ? v.hashTable_.at(i) : 0.0;
@@ -176,14 +199,9 @@ Vector operator*(const Vector& v, double value)
 {
 	Vector result(v.colNumber_);
 
-	for (int i = 0; i < v.colNumber_; ++i)
+	for (auto iter = result.IterBegin(); iter != result.IterEnd(); iter++)
 	{
-		double curValue = v.hashTable_.count(i) != 0 ? v.hashTable_.at(i) : 0.0;
-		curValue *= value;
-		if (isNotEqualToZero(curValue))
-		{
-			result.hashTable_.emplace(i, curValue);
-		}
+		iter->second *= value;
 	}
 	return result;
 }
@@ -192,14 +210,9 @@ Vector operator^(const Vector& v, double value)
 {
 	Vector result(v.colNumber_);
 
-	for (int i = 0; i < v.colNumber_; ++i)
+	for (auto iter = result.IterBegin(); iter != result.IterEnd(); iter++)
 	{
-		double curValue = v.hashTable_.count(i) != 0 ? v.hashTable_.at(i) : 0.0;
-		curValue = std::pow(curValue, value);
-		if (isNotEqualToZero(curValue))
-		{
-			result.hashTable_.emplace(i, curValue);
-		}
+		iter->second = std::pow(iter->second, value);
 	}
 	return result;
 }
