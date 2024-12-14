@@ -10,7 +10,7 @@
 
 bool isNotEqualToZero(double val)
 {
-	return std::abs(val - 0.0) < 1e-6;
+	return !(std::abs(val - 0.0) < 1e-6);
 }
 
 // Define hashing function for "pair<int, int>" key
@@ -144,7 +144,7 @@ std::optional<Matrix2D> operator+(const Matrix2D& m1, const Matrix2D& m2)
 			double sum = result.hashTable_.at(indicesPair) + value;
 			if (isNotEqualToZero(sum))						// after an addition from iterator 2
 			{													// not zero - update the result
-				result.hashTable_.emplace(indicesPair, sum);
+				result.hashTable_[indicesPair] = sum;
 			}
 			else												// zero - erase an element
 			{

@@ -98,7 +98,7 @@ std::optional<Vector> operator+(const Vector& v1, const Vector& v2)
 			double sum = result.hashTable_.at(index) + value;
 			if (isNotEqualToZero(sum))						// after an addition from iterator 2
 			{													// not zero - update the result
-				result.hashTable_.emplace(index, sum);
+				result.hashTable_[index] = sum;
 			}
 			else												// zero - erase an element
 			{
