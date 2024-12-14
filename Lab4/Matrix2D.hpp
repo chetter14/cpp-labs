@@ -77,20 +77,20 @@ public:
 	friend double calculateSumForMult(const Matrix2D& m1, const Matrix2D& m2, int curI, int curJ);
 
 	// Matrix transpose
-	Matrix2D transpose();
+	Matrix2D transpose() const;
 
 	// Finding the inverse matrix 
 	// https://stackoverflow.com/questions/60300482/c-calculating-the-inverse-of-a-matrix
-	Matrix2D getInverse();
+	std::optional<Matrix2D> getInverse() const;
 
 	// Raise matrix to the power (of int and real type)
 	// https://studwork.ru/spravochnik/matematika/matricy/vozvedenie-matricy-v-stepen
-	Matrix2D raiseToPower(int value);
+	std::optional<Matrix2D> raiseToPower(int power) const;
 
 	// Addition, multiplication, and raising to a power each element of matrix by value
 	friend Matrix2D operator+(const Matrix2D& m, double value);
 	friend Matrix2D operator*(const Matrix2D& m, double value);
-	friend Matrix2D operator^(const Matrix2D& v, double value);
+	friend Matrix2D operator^(const Matrix2D& m, double value);
 
 private:
 	// Stores [x_index, y_index]-value pair
@@ -228,17 +228,140 @@ std::optional<Matrix2D> operator*(const Matrix2D& m1, const Matrix2D& m2)
 	//}
 }
 
-Matrix2D Matrix2D::transpose()
+Matrix2D Matrix2D::transpose() const
 {
 	Matrix2D result(colNumber_, rowNumber_);
-	for (int i = 0; i < rowNumber_; ++i)
-	{
-		for (int j = 0; j < colNumber_; ++j)
-		{
 
-		}
+	for (auto iter = hashTable_.cbegin(); iter != hashTable_.cend(); iter++)
+	{
+		auto [row, col] = iter->first;
+		result.hashTable_.emplace(std::pair(col, row), iter->second);
+	}
+	return result;
+}
+
+std::optional<Matrix2D> Matrix2D::getInverse() const
+{
+	if (rowNumber_ != colNumber_)
+	{
+		std::cout << "The matrix is not of square form! Can't do inversion!\n";
+		return {};
 	}
 
+	// Make a copy of current matrix to not modify it
+	Matrix2D curMatr(*this);
+
+	int size = rowNumber_;
+	Matrix2D result(size, size);
+	
+	// Make an identity matrix
+	for (int i = 0; i < size; ++i)
+		result.hashTable_[{i, i}] = 1.0;
+
+	// Do calculations to get an inverse matrix
+	for (int i = 0; i < size; ++i) 
+	{
+		if (!isNotEqualToZero(curMatr.hashTable_.at({i, i})))
+		{
+			std::cout << "Matrix is singular and cannot be inverted!\n";
+			return {};
+		}
+
+		double pivot = curMatr.hashTable_.at({i, i});
+		for (int j = 0; j < size; ++j) 
+		{
+			if (curMatr.hashTable_.find({ i, j }) != curMatr.hashTable_.end())
+			{
+				curMatr.hashTable_[{i, j}] /= pivot;
+			}
+			if (result.hashTable_.find({ i, j }) != result.hashTable_.end())
+			{
+				result.hashTable_[{i, j}] /= pivot;
+			}
+		}
+
+		for (int k = 0; k < size; ++k) 
+		{
+			if (k != i) 
+			{
+				double factor = curMatr.hashTable_[{k, i}];
+				for (int j = 0; j < size; ++j) 
+				{
+					if (curMatr.hashTable_.find({ i, j }) != curMatr.hashTable_.end())
+					{
+						curMatr.hashTable_[{k, j}] -= factor * curMatr.hashTable_[{i, j}];
+					}
+					if (result.hashTable_.find({ i, j }) != result.hashTable_.end())
+					{
+						result.hashTable_[{k, j}] -= factor * result.hashTable_[{i, j}];
+					}	
+				}
+			}
+		}
+	}
+	return result;
+}
+
+std::optional<Matrix2D> Matrix2D::raiseToPower(int power) const
+{
+	if (power < 2)
+	{
+		std::cout << "Power value must be greater or equal to 2!\n";
+		return {};
+	}
+
+	// Make a copy of current matrix
+	Matrix2D result(*this);
+
+	for (int i = 2; i <= power; ++i)
+	{
+		result = (result * (*this)).value();
+	}
+	return result;
+}
+
+Matrix2D operator+(const Matrix2D& m, double value)
+{
+	Matrix2D result(m.rowNumber_, m.colNumber_);
+
+	// No way to avoid brute-force iteration
+	for (int i = 0; i < m.rowNumber_; ++i)
+	{
+		for (int j = 0; j < m.colNumber_; ++j)
+		{
+			double curValue = m.hashTable_.count({ i, j }) != 0 ? m.hashTable_.at({ i, j }) : 0.0;
+			curValue += value;
+			if (isNotEqualToZero(curValue))
+			{
+				result.hashTable_.emplace(std::pair(i, j), curValue);
+			}
+		}
+	}
+	return result;
+}
+
+Matrix2D operator*(const Matrix2D& m, double value)
+{
+	Matrix2D result(m.rowNumber_, m.colNumber_);
+
+	for (auto iter = m.IterCbegin(); iter != m.IterCend(); iter++)
+	{
+		auto [rowNumber, colNumber] = iter->first;
+		result.hashTable_.emplace(std::pair(rowNumber, colNumber), iter->second * value);
+	}
+	return result;
+}
+
+Matrix2D operator^(const Matrix2D& m, double value)
+{
+	Matrix2D result(m.rowNumber_, m.colNumber_);
+
+	for (auto iter = m.IterCbegin(); iter != m.IterCend(); iter++)
+	{
+		auto [rowNumber, colNumber] = iter->first;
+		result.hashTable_.emplace(std::pair(rowNumber, colNumber), std::pow(iter->second, value));
+	}
+	return result;
 }
 
 #endif	// MATRIX_2D_H

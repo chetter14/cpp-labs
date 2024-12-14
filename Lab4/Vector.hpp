@@ -199,9 +199,10 @@ Vector operator*(const Vector& v, double value)
 {
 	Vector result(v.colNumber_);
 
-	for (auto iter = result.IterBegin(); iter != result.IterEnd(); iter++)
+	for (auto iter = v.IterCbegin(); iter != v.IterCend(); iter++)
 	{
-		iter->second *= value;
+		auto [colNumber, curValue] = (*iter);
+		result.hashTable_.emplace(colNumber, curValue * value);
 	}
 	return result;
 }
@@ -212,7 +213,8 @@ Vector operator^(const Vector& v, double value)
 
 	for (auto iter = result.IterBegin(); iter != result.IterEnd(); iter++)
 	{
-		iter->second = std::pow(iter->second, value);
+		auto [colNumber, curValue] = (*iter);
+		result.hashTable_.emplace(colNumber, std::pow(curValue, value));
 	}
 	return result;
 }
